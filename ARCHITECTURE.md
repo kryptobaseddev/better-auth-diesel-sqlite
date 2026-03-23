@@ -85,22 +85,22 @@ better-auth-diesel-sqlite/
 │   │   ├── two_factor.rs        # impl TwoFactorOps
 │   │   ├── api_key.rs           # impl ApiKeyOps
 │   │   └── passkey.rs           # impl PasskeyOps
-│   └── test_utils.rs            # Test helpers, fixtures, in-memory SQLite setup
 ├── tests/
-│   ├── integration/
-│   │   ├── mod.rs
-│   │   ├── user_ops.rs
-│   │   ├── session_ops.rs
-│   │   ├── account_ops.rs
-│   │   ├── verification_ops.rs
-│   │   ├── organization_ops.rs
-│   │   ├── member_ops.rs
-│   │   ├── invitation_ops.rs
-│   │   ├── two_factor_ops.rs
-│   │   ├── api_key_ops.rs
-│   │   └── passkey_ops.rs
-│   └── common/
-│       └── mod.rs               # Shared test setup
+│   ├── tests.rs                 # Test harness entry point
+│   ├── common/
+│   │   └── mod.rs               # test_adapter() helper (in-memory + migrations)
+│   └── integration/
+│       ├── mod.rs               # Module declarations for all 10 test files
+│       ├── user_ops.rs          # 10 tests
+│       ├── session_ops.rs       # 8 tests
+│       ├── account_ops.rs       # 5 tests
+│       ├── verification_ops.rs  # 7 tests
+│       ├── organization_ops.rs  # 6 tests
+│       ├── member_ops.rs        # 6 tests
+│       ├── invitation_ops.rs    # 6 tests
+│       ├── two_factor_ops.rs    # 4 tests
+│       ├── api_key_ops.rs       # 7 tests
+│       └── passkey_ops.rs       # 7 tests
 └── examples/
     └── axum_basic.rs            # Minimal Axum app using DieselSqliteAdapter
 ```
@@ -327,25 +327,26 @@ PRAGMA cache_size = -64000;         -- 64MB page cache
 
 ## Testing Strategy
 
-### Unit Tests
+### Integration Tests (61 tests)
 
-Each `ops/*.rs` file includes unit tests that:
-1. Create an in-memory SQLite database
-2. Run embedded migrations
-3. Exercise each trait method
-4. Assert expected results and error conditions
+All tests live in `tests/integration/` with one module per trait. Each test:
+1. Creates an in-memory SQLite adapter via `test_adapter()` helper
+2. Runs embedded migrations automatically
+3. Exercises trait methods against a real (in-memory) SQLite database
+4. Asserts expected results, error conditions, and edge cases
 
-### Integration Tests
+Test coverage includes:
+- CRUD operations for all 10 entity types
+- Search/filter/pagination (UserOps `list_users`)
+- Atomic operations (VerificationOps `consume_verification`)
+- Cascading behavior (delete user → sessions cleaned up)
+- Expiry cleanup (expired sessions, API keys, verifications)
+- Edge cases (duplicate emails, nonexistent lookups, ban/unban logic)
+- Relationship queries (list user organizations via member join)
 
-`tests/integration/` contains tests that:
-1. Verify the adapter works with the full better-auth plugin stack
-2. Test concurrent access patterns
-3. Verify schema compatibility with better-auth-rs's expectations
-4. Test edge cases (expired sessions, revoked keys, banned users)
+### Doctests (2 tests)
 
-### Property-Based Testing
-
-Where applicable, use `proptest` or `quickcheck` to generate random entities and verify round-trip persistence (create -> read -> verify equality).
+Compile-only doctests verify the example code in `lib.rs` and `adapter.rs` compiles correctly against the actual better-auth API.
 
 ## Feature Flags
 
