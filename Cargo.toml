@@ -1,6 +1,6 @@
 [package]
 name = "better-auth-diesel-sqlite"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2024"
 rust-version = "1.88"
 description = "SQLite database adapter for better-auth-rs using Diesel ORM — compile-time verified queries, 65 methods across 10 traits"

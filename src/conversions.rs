@@ -22,11 +22,24 @@ use crate::models::{
 
 // ── Timestamp helpers ──────────────────────────────────────────────────────
 
-/// Parse an ISO 8601 string into a `DateTime<Utc>`, falling back to epoch on failure.
+/// Parse a timestamp string into `DateTime<Utc>`.
+///
+/// Handles both ISO 8601 / RFC 3339 text (e.g. `"2026-03-24T01:00:00+00:00"`)
+/// and unix epoch integers stored as text (e.g. `"1711234567"`). This allows
+/// the adapter to share a database with ORMs that store timestamps as integers
+/// (e.g. sqlx with `INTEGER NOT NULL` columns).
 pub(crate) fn parse_datetime(s: &str) -> DateTime<Utc> {
-    DateTime::parse_from_rfc3339(s)
-        .map(|dt| dt.with_timezone(&Utc))
-        .unwrap_or_default()
+    // Try ISO 8601 first (the format we write).
+    if let Ok(dt) = DateTime::parse_from_rfc3339(s) {
+        return dt.with_timezone(&Utc);
+    }
+    // Fall back to unix epoch integer (for shared-DB compat with sqlx).
+    if let Ok(ts) = s.parse::<i64>()
+        && let Some(dt) = DateTime::from_timestamp(ts, 0)
+    {
+        return dt.with_timezone(&Utc);
+    }
+    DateTime::default()
 }
 
 /// Format a `DateTime<Utc>` as an ISO 8601 / RFC 3339 string.
